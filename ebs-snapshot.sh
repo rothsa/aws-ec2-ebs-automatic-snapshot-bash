@@ -84,23 +84,23 @@ snapshot_volumes() {
 		unencrypted_snapshot_id=$(aws ec2 create-snapshot --region $region --output=text --description $snapshot_description --volume-id $volume_id --query SnapshotId)
 		log "Unencrypted snapshot is $unencrypted_snapshot_id"
 
-    if [[ $encrypt_snapshot == "true" ]]; then
-      # Copy snapshot into encrypted version
-      snapshot_id=$(aws ec2 copy-snapshot --region $region --output=text  --source-region $region --source-snapshot-id $unencrypted_snapshot_id --encrypted  --description $snapshot_description)
-      log "New encrypted snapshot is $snapshot_id"
+    	if [[ $encrypt_snapshot == "true" ]]; then
+      		# Copy snapshot into encrypted version
+      		snapshot_id=$(aws ec2 copy-snapshot --region $region --output=text  --source-region $region --source-snapshot-id $unencrypted_snapshot_id --encrypted  --description $snapshot_description)
+      		log "New encrypted snapshot is $snapshot_id"
 
-      # Delete unencrypted snapshot
-      aws ec2 delete-snapshot --region $region --snapshot-id $unencrypted_snapshot_id
-      log "Deleted unencrypted snapshot $unencrypted_snapshot_id"
+      		# Delete unencrypted snapshot
+      		aws ec2 delete-snapshot --region $region --snapshot-id $unencrypted_snapshot_id
+      		log "Deleted unencrypted snapshot $unencrypted_snapshot_id"
 
-    else
-      snapshot_id=$unencrypted_snapshot_id
-    fi
+    	else
+      		snapshot_id=$unencrypted_snapshot_id
+    	fi
 
     # Add a "CreatedBy:AutomatedBackup" tag to the resulting snapshot.
     # Why? Because we only want to purge snapshots taken by the script later, and not delete snapshots manually taken.
-		aws ec2 create-tags --region $region --resource $snapshot_id --tags Key=CreatedBy,Value=AutomatedBackup
-	done
+  		aws ec2 create-tags --region $region --resource $snapshot_id --tags Key=CreatedBy,Value=AutomatedBackup
+  done
 }
 
 # Function: Cleanup all snapshots associated with this instance that are older than $retention_days
