@@ -1,11 +1,10 @@
-aws-ec2-ebs-automatic-snapshot-bash
+aws-ec2-ebs-automatic-encrypted-snapshot-bash
 ===================================
 
-####Bash script for Automatic EBS Snapshots and Cleanup on Amazon Web Services (AWS)
+####Bash script for Automatic encrypted EBS Snapshots on Amazon Web Services (AWS)
 
-Written by  **[AWS Consultants - Casey Labs Inc.] (http://www.caseylabs.com)**
-
-*Contact us for all your Amazon Web Services consulting needs!*
+Written by Sally Lehman
+Adapted from [CaseyLabs/aws-ec2-ebs-automatic-snapshot-bash](https://github.com/CaseyLabs/aws-ec2-ebs-automatic-snapshot-bash)
 
 ===================================
 
@@ -14,7 +13,8 @@ ebs-snapshot.sh will:
 - Determine the instance ID of the EC2 server on which the script runs
 - Gather a list of all volume IDs attached to that instance
 - Take a snapshot of each attached volume
-- The script will then delete all associated snapshots taken by the script that are older than 7 days
+- Copy snapshots into encrypted snapsnots
+- Delete unencrypted snapshots
 
 Pull requests greatly welcomed!
 
@@ -76,7 +76,7 @@ Default output format: (Enter "text".)```
 **Install Script**: Download the latest version of the snapshot script and make it executable:
 ```
 cd ~
-wget https://raw.githubusercontent.com/CaseyLabs/aws-ec2-ebs-automatic-snapshot-bash/master/ebs-snapshot.sh
+wget https://raw.githubusercontent.com/rothsa/aws-ec2-ebs-automatic-snapshot-bash/master/ebs-snapshot.sh
 chmod +x ebs-snapshot.sh
 mkdir -p /opt/aws
 sudo mv ebs-snapshot.sh /opt/aws/
@@ -88,8 +88,10 @@ You should then setup a cron job in order to schedule a nightly backup. Example 
 
 # Or written another way:
 AWS_CONFIG_FILE="/root/.aws/config" 
-55 22 * * * root  /opt/aws/ebs-snapshot.sh
+0 */3 * * * root  /opt/aws/ebs-snapshot.sh
 ```
+Due to the frequency by which snapshot creations in AWS fail, this should be run frequently, and regular
+checks should be done to ensure that there is a backup available that is sufficiently recent.
 
 To manually test the script:
 ```
