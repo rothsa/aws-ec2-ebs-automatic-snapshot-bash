@@ -84,7 +84,7 @@ snapshot_volumes() {
         	log "Unencrypted snapshot state: $unencrypted_state"
     	done
 
-     	timeout 300 encrypt_snapshot
+     	encrypt_snapshot
 
         # Cleanup unencrypted snapshot
         log "Deleting unencrypted snapshot $unencrypted_snapshot_id"
