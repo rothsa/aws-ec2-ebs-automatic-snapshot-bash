@@ -58,12 +58,12 @@ log() {
 
 # Function: Confirm that the AWS CLI and related tools are installed.
 prerequisite_check() {
-        for prerequisite in aws wget; do
-                hash $prerequisite &> /dev/null
-                if [[ $? == 1 ]]; then
-                        echo "In order to use this script, the executable \"$prerequisite\" must be installed." 1>&2; exit 70
-                fi
-        done
+    for prerequisite in aws wget; do
+        hash $prerequisite &> /dev/null
+            if [[ $? == 1 ]]; then
+                echo "In order to use this script, the executable \"$prerequisite\" must be installed." 1>&2; exit 70
+            fi
+    done
 }
 
 # Function: Snapshot all volumes attached to this instance.
