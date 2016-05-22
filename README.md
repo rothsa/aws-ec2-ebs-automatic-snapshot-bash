@@ -4,6 +4,7 @@ aws-ec2-ebs-automatic-encrypted-snapshot-bash
 ####Bash script for Automatic encrypted EBS Snapshots on Amazon Web Services (AWS)
 
 Written by Sally Lehman
+
 Adapted from [CaseyLabs/aws-ec2-ebs-automatic-snapshot-bash](https://github.com/CaseyLabs/aws-ec2-ebs-automatic-snapshot-bash)
 
 ===================================
