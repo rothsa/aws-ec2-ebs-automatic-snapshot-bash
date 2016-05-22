@@ -10,6 +10,7 @@ Adapted from [CaseyLabs/aws-ec2-ebs-automatic-snapshot-bash](https://github.com/
 ===================================
 
 **How it works:**
+
 ebs-snapshot.sh is run however often you want backups. It will:
 - Determine the instance ID of the EC2 server on which the script runs
 - Gather a list of all volume IDs attached to that instance
