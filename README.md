@@ -10,12 +10,17 @@ Adapted from [CaseyLabs/aws-ec2-ebs-automatic-snapshot-bash](https://github.com/
 ===================================
 
 **How it works:**
-ebs-snapshot.sh will:
+ebs-snapshot.sh is run however often you want backups. It will:
 - Determine the instance ID of the EC2 server on which the script runs
 - Gather a list of all volume IDs attached to that instance
 - Take a snapshot of each attached volume
 - Copy snapshots into encrypted snapsnots
 - Delete unencrypted snapshots
+
+ebs-snapshot-cleanup.sh is run daily to keep snapshots from piling up. It will:
+- Look up all snapshots based on their Description 
+- Delete snapshots older than 7 days
+- Delete unencrypted snapshots if ebs-snapshot.sh times out before it can delete them.
 
 Pull requests greatly welcomed!
 
@@ -77,19 +82,18 @@ Default output format: (Enter "text".)```
 **Install Script**: Download the latest version of the snapshot script and make it executable:
 ```
 cd ~
-wget https://raw.githubusercontent.com/rothsa/aws-ec2-ebs-automatic-snapshot-bash/master/ebs-snapshot.sh
-chmod +x ebs-snapshot.sh
+git clone https://github.com/rothsa/aws-ec2-ebs-automatic-snapshot-bash.git
+cd aws-ec2-ebs-automatic-snapshot-bash
+chmod +x ebs-snapshot*.sh
 mkdir -p /opt/aws
-sudo mv ebs-snapshot.sh /opt/aws/
+sudo mv ebs-snapshot*.sh /opt/aws/
 ```
 
 You should then setup a cron job in order to schedule a nightly backup. Example crontab jobs:
 ```
-55 22 * * * root  AWS_CONFIG_FILE="/root/.aws/config" /opt/aws/ebs-snapshot.sh
+0 */3 * * * root timeout 600 /opt/aws/ebs-snapshot.sh
+30 2 * * * root /opt/aws/ebs-snapshot-cleanup.sh
 
-# Or written another way:
-AWS_CONFIG_FILE="/root/.aws/config" 
-0 */3 * * * root  /opt/aws/ebs-snapshot.sh
 ```
 Due to the frequency by which snapshot creations in AWS fail, this should be run frequently, and regular
 checks should be done to ensure that there is a backup available that is sufficiently recent.
@@ -97,4 +101,5 @@ checks should be done to ensure that there is a backup available that is suffici
 To manually test the script:
 ```
 sudo /opt/aws/ebs-snapshot.sh
+sudo /opt/aws/ebs-snapshot-cleanup.sh
 ```
