@@ -6,7 +6,7 @@ export PATH=$PATH:/usr/local/bin/:/usr/bin
 set -ue
 set -o pipefail
 
-## Automatic EBS Volume Snapsho Clean-Up Script
+## Automatic EBS Volume Snapshot Clean-Up Script
 # Written by: Sally Lehman
 # Additonal credits: Casey Labs;  Log function by Alan Franzoni; Pre-req check by Colin Johnson
 #
@@ -15,7 +15,7 @@ set -o pipefail
 # - The script will then delete all associated snapshots taken by the script that are older than 7 days
 # - The script will also delete all snapshots that are unencrypted
 #
-# DISCLAIMER: This script deletes snapshots
+# DISCLAIMER: This script deletes snapshots, including ALL UNENCRYPTED SNAPSHOTS for the instance it's running on.
 # Make sure that you understand how the script works. No responsibility accepted in event of accidental data loss.
 #
 

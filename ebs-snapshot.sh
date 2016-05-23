@@ -22,7 +22,7 @@ set -o pipefail
 #
 
 
-## Variable Declartions ##
+## Variable Declarations ##
 
 # Get Instance Details
 instance_id=$(wget -q -O- http://169.254.169.254/latest/meta-data/instance-id)
@@ -71,7 +71,7 @@ snapshot_volumes() {
     for volume_id in $volume_list; do
         log "Volume ID is $volume_id"
 
-    	# Get the attched device name to add to the description so we can easily tell which volume this is.
+    	# Get the attached device name to add to the description so we can easily tell which volume this is.
     	device_name=$(aws ec2 describe-volumes --region $region --output=text --volume-ids $volume_id --query 'Volumes[0].{Devices:Attachments[0].Device}')
     	# Take a snapshot of the current volume, and capture the resulting snapshot ID
     	snapshot_description="$(hostname)-$device_name-backup-$(date +%Y-%m-%d)"

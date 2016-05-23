@@ -6,6 +6,18 @@ export PATH=$PATH:/usr/local/bin/:/usr/bin
 set -ue
 set -o pipefail
 
+# Automatic EBS Volume Snapshot Clean-Up Script
+# Written by: Sally Lehman
+# Additonal credits: Log function by Alan Franzoni; Pre-req check by Colin Johnson
+#
+# PURPOSE: This Bash script replaces the /data dir for MongoDB with one from a backup snapshot.
+# - Determine the snapshot IDs of backup using the original hostname and device where the snapshot was taken.
+# - The script will then choose an available snapshot within a given date range and create a new volume with it.
+# - The script will then unmount the device, detach the current volume, attach the new volume, and mount /data.
+# - When finished, monogod will be running again and ready to receive queries on the new snapshot.
+
+
+
 # Get Instance Details
 instance_id=$(wget -q -O- http://169.254.169.254/latest/meta-data/instance-id)
 region=$(wget -q -O- http://169.254.169.254/latest/meta-data/placement/availability-zone | sed -e 's/\([1-9]\).$/\1/g')
@@ -19,12 +31,11 @@ logfile_max_lines="5000"
 device_id="/dev/xvdf"
 
 # Hostname from which the snapshots originated
-snapshot_origin_hostname=ip-10-0-3-68
+snapshot_origin_hostname="ip-10-0-3-68"
 
-# How old of a backup are you looking for? Default: 1 days
-# This is just a placeholdern production this would probably be expanded to a date range
-oldest_backup_age="1"
-newest_backup_age="0"
+# How old of a backup are you looking for? 
+oldest_backup_age="1" # 1 = 1 day
+newest_backup_age="0" # 0 = now
 oldest_backup_age_in_seconds=$(date +%s --date "$oldest_backup_age days ago")
 newest_backup_age_in_seconds=$(date +%s --date "$newest_backup_age days ago")
 ## Function Declarations ##
@@ -53,7 +64,8 @@ prerequisite_check() {
         fi
     done
 }
-# Function: Find snapshots matching description for the snapshot origin hostname and select the first one that is old enough to meet requirements.
+# Function: Find snapshots matching description for the snapshot origin hostname 
+# and select the first one that is old enough to meet requirements.
 choose_snapshot() {
     initial_snapshot_description="$snapshot_origin_hostname-$device_id-backup-*"
     snapshot_list=$(aws ec2 describe-snapshots --region $region --output=text --filters Name=description,Values=$initial_snapshot_description Name=status,Values='completed' --query Snapshots[].SnapshotId)
@@ -73,7 +85,7 @@ choose_snapshot() {
 
     log "Selected snapshot: $snapshot_to_restore"
 }
-# Function: This function creates a new EBS volume from the chosen backup snapshot
+# Function: Create a new EBS volume from the chosen backup snapshot
 create_volume() {
     new_volume_id=$(aws ec2 create-volume --region $region --availability-zone $availability_zone --snapshot-id $snapshot_to_restore --query VolumeId --output text)
     log "New volume is $new_volume_id"
@@ -85,38 +97,37 @@ create_volume() {
     log "New Volume $new_volume_id $check_volume_status"
 }
 
-# Function: This function unmounts the block device for the old volume
+# Function: Umount the block device for the old volume
 unmount_mongo_data() {
-    # Shut down mongo and unmount the /data mounted device
     service mongod stop
     umount -d $device_id
     sleep 5;
     if grep -qs $device_id /proc/mounts; then
-        log "Old device not unmounted"
+        log "Old device not unmounted."
         exit
     else
-        log "Old device unmounted"
+        log "Old device unmounted."
     fi
 }
-# Function: This function ensures that /data is now accessible from the new volume
+# Function: Ensure that /data is now accessible from the new volume
 mount_mongo_data() {
 #check unmounted
     mount /data
     sleep 5;
     #ensure mounted
     if grep -qs $device_id /proc/mounts; then
-        log "New device mounted. Starting Mongod"
+        log "New device mounted. Starting Mongod..."
         service mongod start
     else
         log "New device not mounted, exiting."
         exit
     fi
 }
-# Function: This function detaches the existing EBS volume from this instance
+# Function: Detach the existing EBS volume from this instance
 detach_old_data_volume() {
-    # find old_volume_id
+    # Find old_volume_id
     old_volume_id=$(aws ec2 describe-volumes --region $region --filters Name=attachment.status,Values="attached" Name=attachment.instance-id,Values=$instance_id Name=attachment.device,Values=$device_id --query Volumes[].VolumeId --output text)
-    log "Located attached volume $old_volume_id. Commencing to detach"
+    log "Located attached volume $old_volume_id. Detaching..."
     detached_volume_status=$(aws ec2 detach-volume --instance-id $instance_id --device $device_id --volume-id $old_volume_id --region $region --query State)
     log "$old_volume_id now is  $detached_volume_status"
     if ! [[ detached_volume_status == "available" ]]; then
@@ -128,9 +139,9 @@ detach_old_data_volume() {
         exit
     fi
 }
-# Function: This function attaches the newly created EBS volume to this instance and block device
+# Function: Attaches the newly created EBS volume to this instance and block device
 attach_new_data_volume() {
-    log "Commencing to attach new volume $new_volume_id."
+    log "Attaching new volume $new_volume_id."
     attach_volume_status=$(aws ec2 attach-volume --instance-id $instance_id --device $device_id --volume-id $new_volume_id --region $region --query State)
     if ! [[ attach_volume_status == "in-use" ]]; then
         sleep 15;
