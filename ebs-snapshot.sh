@@ -78,7 +78,7 @@ snapshot_volumes() {
     	unencrypted_snapshot_id=$(aws ec2 create-snapshot --region $region --output=text --description $snapshot_description --volume-id $volume_id --query SnapshotId)
     	unencrypted_state=$(aws ec2 describe-snapshots --snapshot-id $unencrypted_snapshot_id --query Snapshots[].State)
     	log "Unencrypted snapshot state: $unencrypted_state"
-    	while ! [[ $unencrypted_state == "completed" ]]; do
+    	while (( $SECONDS < 60 )) && ! [[ $unencrypted_state == "completed" ]]; do
         	sleep 30;
         	state=$(aws ec2 describe-snapshots --snapshot-id $unencrypted_snapshot_id --query Snapshots[].State)
         	log "Unencrypted snapshot state: $unencrypted_state"
@@ -98,7 +98,7 @@ encrypt_snapshot() {
 
     encrypted_state=$(aws ec2 describe-snapshots --snapshot-id $snapshot_id --query Snapshots[].State)
     log "Encrypted snapshot $snapshot_id state: $encrypted_state"
-    while ! [[ $encrypted_state == "completed" ]]; do
+    while (( $SECONDS < 180 )) && ! [[ $encrypted_state == "completed" ]]; do
         sleep 30;
         encrypted_state=$(aws ec2 describe-snapshots --snapshot-id $snapshot_id --query Snapshots[].State)
         log "Encrypted snapshot $snapshot_id state: $encrypted_state"
