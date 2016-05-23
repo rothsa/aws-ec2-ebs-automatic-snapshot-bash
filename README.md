@@ -97,8 +97,8 @@ sudo mv ebs-snapshot*.sh /opt/aws/
 
 You should then setup a cron job in order to schedule a nightly backup. Example crontab jobs:
 ```
-0 */3 * * * ./opt/aws/ebs-snapshot.sh
-30 2 * * * ./opt/aws/ebs-snapshot-cleanup.sh
+0 */3 * * * /opt/aws/ebs-snapshot.sh
+30 2 * * * /opt/aws/ebs-snapshot-cleanup.sh
 
 ```
 Due to the frequency by which snapshot creations in AWS fail, this should be run frequently, and regular
@@ -106,7 +106,7 @@ checks should be done to ensure that there is a backup available that is suffici
 
 To manually test the script:
 ```
-./opt/aws/ebs-snapshot.sh
-./opt/aws/ebs-snapshot-cleanup.sh
+/opt/aws/ebs-snapshot.sh
+/opt/aws/ebs-snapshot-cleanup.sh
 sudo /opt/aws/ebs-snapshot-restore.sh # must be run as root in order to allow mounting and unmounting for devices. 
 ```
