@@ -23,6 +23,11 @@ ebs-snapshot-cleanup.sh is run daily to keep snapshots from piling up. It will:
 - Delete snapshots older than 7 days
 - Delete unencrypted snapshots if ebs-snapshot.sh times out before it can delete them.
 
+ebs-snapshot-restore.sh is an on-demand script to restore a single snapshot to a single device. It will:
+- Look up all snapshots based on their Description 
+- Choose a snapshot based on a date range
+- Create_volume, unmount the device, detach the old volume, attach the new, and mount the new data directory.
+
 Pull requests greatly welcomed!
 
 ===================================
@@ -92,8 +97,8 @@ sudo mv ebs-snapshot*.sh /opt/aws/
 
 You should then setup a cron job in order to schedule a nightly backup. Example crontab jobs:
 ```
-0 */3 * * * root timeout 600 /opt/aws/ebs-snapshot.sh
-30 2 * * * root /opt/aws/ebs-snapshot-cleanup.sh
+0 */3 * * * ./opt/aws/ebs-snapshot.sh
+30 2 * * * ./opt/aws/ebs-snapshot-cleanup.sh
 
 ```
 Due to the frequency by which snapshot creations in AWS fail, this should be run frequently, and regular
@@ -101,6 +106,7 @@ checks should be done to ensure that there is a backup available that is suffici
 
 To manually test the script:
 ```
-sudo /opt/aws/ebs-snapshot.sh
-sudo /opt/aws/ebs-snapshot-cleanup.sh
+./opt/aws/ebs-snapshot.sh
+./opt/aws/ebs-snapshot-cleanup.sh
+sudo /opt/aws/ebs-snapshot-restore.sh # must be run as root in order to allow mounting and unmounting for devices. 
 ```
