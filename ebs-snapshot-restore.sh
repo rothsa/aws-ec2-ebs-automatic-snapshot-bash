@@ -89,11 +89,8 @@ choose_snapshot() {
 create_volume() {
     new_volume_id=$(aws ec2 create-volume --region $region --availability-zone $availability_zone --snapshot-id $snapshot_to_restore --query VolumeId --output text)
     log "New volume is $new_volume_id"
+    aws ec2 wait volume-available --region $region --volume-ids $new_volume_id --query Volumes[].State --output text
     check_volume_status=$(aws ec2 describe-volumes --region $region --volume-ids $new_volume_id --query Volumes[].State --output text)
-    if ! [[ check_volume_status == "available" ]]; then
-        sleep 10;
-        check_volume_status=$(aws ec2 describe-volumes --region $region --volume-ids $new_volume_id --query Volumes[].State --output text)
-    fi
     log "New Volume $new_volume_id $check_volume_status"
 }
 
@@ -112,8 +109,9 @@ unmount_mongo_data() {
 # Function: Ensure that /data is now accessible from the new volume
 mount_mongo_data() {
 #check unmounted
-    mount /data
     sleep 5;
+    mount /data
+    sleep 10;
     #ensure mounted
     if grep -qs $device_id /proc/mounts; then
         log "New device mounted. Starting Mongod..."
@@ -129,29 +127,19 @@ detach_old_data_volume() {
     old_volume_id=$(aws ec2 describe-volumes --region $region --filters Name=attachment.status,Values="attached" Name=attachment.instance-id,Values=$instance_id Name=attachment.device,Values=$device_id --query Volumes[].VolumeId --output text)
     log "Located attached volume $old_volume_id. Detaching..."
     detached_volume_status=$(aws ec2 detach-volume --instance-id $instance_id --device $device_id --volume-id $old_volume_id --region $region --query State)
-    log "$old_volume_id now is  $detached_volume_status"
-    if ! [[ detached_volume_status == "available" ]]; then
-        sleep 20;
-        detached_volume_status=$(aws ec2 describe-volumes --region $region --volume-id $old_volume_id --query Volumes[].State --output text)
-        log "$old_volume_id now is $detached_volume_status"
-    else
-        "Volume taking abnormal time to detach, exiting"
-        exit
-    fi
+    log "$old_volume_id detach initiated, now is $detached_volume_status"
+    aws ec2 wait volume-available --region $region --volume-id $old_volume_id --query Volumes[].State --output text
+    detached_volume_status=$(aws ec2 describe-volumes --region $region --volume-id $old_volume_id --query Volumes[].State --output text)
+    log "$old_volume_id now is $detached_volume_status, and if available then it is successfully detached."
 }
 # Function: Attaches the newly created EBS volume to this instance and block device
 attach_new_data_volume() {
     log "Attaching new volume $new_volume_id."
     attach_volume_status=$(aws ec2 attach-volume --instance-id $instance_id --device $device_id --volume-id $new_volume_id --region $region --query State)
-    if ! [[ attach_volume_status == "in-use" ]]; then
-        sleep 15;
-        attach_volume_status=$(aws ec2 describe-volumes --region $region --volume-id $new_volume_id --query Volumes[].State --output text)
-        log "$new_volume_id is now $attach_volume_status"
-    else
-        "Volume taking an abnormal amount of time to attach, exiting"
-        exit
-    fi
-    log "New volume $new_volume_id $attach_volume_status"
+    aws ec2 wait volume-in-use --region $region --volume-id $new_volume_id --query Volumes[].State --output text
+    attach_volume_status=$(aws ec2 describe-volumes --region $region --volume-id $new_volume_id --query Volumes[].State --output text)
+    log "$new_volume_id is now $attach_volume_status"
+    log "New volume $new_volume_id $attach_volume_status, and if in-use than it has been attached."
 }
 
 ## SCRIPT COMMANDS ##
