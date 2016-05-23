@@ -73,16 +73,12 @@ snapshot_volumes() {
 
     	# Get the attached device name to add to the description so we can easily tell which volume this is.
     	device_name=$(aws ec2 describe-volumes --region $region --output=text --volume-ids $volume_id --query 'Volumes[0].{Devices:Attachments[0].Device}')
-    	# Take a snapshot of the current volume, and capture the resulting snapshot ID
-    	snapshot_description="$(hostname)-$device_name-backup-$(date +%Y-%m-%d)"
-    	unencrypted_snapshot_id=$(aws ec2 create-snapshot --region $region --output=text --description $snapshot_description --volume-id $volume_id --query SnapshotId)
-    	unencrypted_state=$(aws ec2 describe-snapshots --snapshot-id $unencrypted_snapshot_id --query Snapshots[].State)
-    	log "Unencrypted snapshot state: $unencrypted_state"
-    	while (( $SECONDS < 60 )) && ! [[ $unencrypted_state == "completed" ]]; do
-        	sleep 30;
-        	state=$(aws ec2 describe-snapshots --snapshot-id $unencrypted_snapshot_id --query Snapshots[].State)
-        	log "Unencrypted snapshot state: $unencrypted_state"
-    	done
+        # Take a snapshot of the current volume, and capture the resulting snapshot ID
+        snapshot_description="$(hostname)-$device_name-backup-$(date +%Y-%m-%d)"
+        unencrypted_snapshot_id=$(aws ec2 create-snapshot --region $region --output=text --description $snapshot_description --volume-id $volume_id --query SnapshotId)
+        aws ec2 wait snapshot-completed --snapshot-id $unencrypted_snapshot_id --query Snapshots[].State
+        unencrypted_state=$(aws ec2 describe-snapshots --snapshot-id $unencrypted_snapshot_id --query Snapshots[].State)
+        log "Unencrypted snapshot state: $unencrypted_state"
 
      	encrypt_snapshot
 
@@ -95,14 +91,9 @@ snapshot_volumes() {
 encrypt_snapshot() {
     #Take a copy of the snapshot and encrypt it with Amazon's CMK key
     snapshot_id=$(aws --region $region ec2 copy-snapshot --output=text  --source-region $region --source-snapshot-id $unencrypted_snapshot_id --encrypted  --description $snapshot_description)
-
+    aws ec2 wait snapshot-completed --snapshot-id $snapshot_id --query Snapshots[].State
     encrypted_state=$(aws ec2 describe-snapshots --snapshot-id $snapshot_id --query Snapshots[].State)
     log "Encrypted snapshot $snapshot_id state: $encrypted_state"
-    while (( $SECONDS < 180 )) && ! [[ $encrypted_state == "completed" ]]; do
-        sleep 30;
-        encrypted_state=$(aws ec2 describe-snapshots --snapshot-id $snapshot_id --query Snapshots[].State)
-        log "Encrypted snapshot $snapshot_id state: $encrypted_state"
-    done
 }
 
 ## SCRIPT COMMANDS ##
