@@ -24,7 +24,7 @@ region=$(wget -q -O- http://169.254.169.254/latest/meta-data/placement/availabil
 availability_zone=$(wget -q -O- http://169.254.169.254/latest/meta-data/placement/availability-zone)
 
 # Set Logging Options
-logfile="/var/log/ebs-snapshot.log"
+logfile="/var/log/ebs-snapshot-restore.log"
 logfile_max_lines="5000"
 
 # Mongo DB data folder associated device
